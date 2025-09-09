@@ -22,16 +22,16 @@
   },
   
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "popup/popup.html",
     "default_icon": {
-      "48": "icon-default-48.png"
+      "48": "icons/icon-default-48.png"
     },
     "default_title": "IITG Wi-Fi Auto Login"
   },
   
-  "options_page": "options.html",
+  "options_page": "options/options.html",
   
   "icons": {
-    "48": "icon-default-48.png"
+    "48": "icons/icon-default-48.png"
   }
 }

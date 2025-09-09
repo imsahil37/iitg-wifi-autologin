@@ -64,17 +64,17 @@ function updateState(updates) {
   state = { ...state, ...updates };
   
   // Update icon based on status
-  let iconPath = 'icon-default-48.png';
+  let iconPath = 'icons/icon-default-48.png';
   let badgeText = '';
   
   switch (state.status) {
     case 'connected':
-      iconPath = 'icon-green-48.png';
+      iconPath = 'icons/icon-green-48.png';
       badgeText = 'OK';
       break;
     case 'error':
     case 'network_down':
-      iconPath = 'icon-red-48.png';
+      iconPath = 'icons/icon-red-48.png';
       badgeText = 'ERR';
       break;
     default:
@@ -357,7 +357,7 @@ async function performLogin() {
 function showCredentialsNotification() {
   chrome.notifications.create('credentials-needed', {
     type: 'basic',
-    iconUrl: 'icon-red-48.png',
+    iconUrl: 'icons/icon-red-48.png',
     title: 'IITG Wi-Fi Auto Login',
     message: 'Invalid credentials. Please update your username and password in the extension options.',
     buttons: [{ title: 'Open Options' }],
