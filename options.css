@@ -213,3 +213,30 @@ input[type="password"]:focus {
 .status-value {
   color: var(--md-sys-color-on-surface);
 }
+
+.warning-message {
+  background-color: #FFF3CD;
+  border: 1px solid #FFEAA7;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  color: #856404;
+  font-size: 14px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .warning-message {
+    background-color: #332701;
+    border-color: #664802;
+    color: #D1A827;
+  }
+}
+
+.warning-message ul {
+  margin: 10px 0 0 20px;
+  padding: 0;
+}
+
+.warning-message li {
+  margin: 5px 0;
+}

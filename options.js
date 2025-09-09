@@ -1,3 +1,8 @@
+import { credentialManager } from './utils/crypto-utils.js';
+// crypto--encryption
+//const credManager = new credentialManager();
+//credManager.initialize();
+
 // Get elements
 const credentialsForm = document.getElementById('credentials-form');
 const usernameInput = document.getElementById('username');
@@ -59,16 +64,24 @@ function showMessage(text, type) {
 // Load saved settings
 async function loadSettings() {
   try {
-    const data = await chrome.storage.local.get(['username', 'password', 'paused']);
-    
-    if (data.username) {
-      usernameInput.value = data.username;
-    }
-    if (data.password) {
-      passwordInput.value = data.password;
+    const data = await chrome.storage.local.get(['encryptedCreds', 'paused']);
+
+    if (data.encryptedCreds) {
+      usernameInput.placeholder = "Username saved (encrypted)";
+      passwordInput.placeholder = "Password saved (encrypted)";
     }
     
     pauseToggle.checked = data.paused || false;
+
+ //   
+ //   if (data.username) {
+ //     usernameInput.value = data.username;
+ //   }
+ //   if (data.password) {
+ //     passwordInput.value = data.password;
+ //   }
+ //   
+ //   pauseToggle.checked = data.paused || false;
     
   } catch (error) {
     console.error('Error loading settings:', error);
@@ -111,11 +124,20 @@ credentialsForm.addEventListener('submit', async (e) => {
   }
   
   try {
-    await chrome.storage.local.set({ username, password });
-    showMessage('Credentials saved successfully!', 'success');
+    const encrypted = await credentialManager.encryptCredentials(username, password);
+    await chrome.storage.local.set({ encryptedCreds: encrypted });
     
-    // Trigger a check if credentials were previously missing
+    // Clear form for security
+    usernameInput.value = '';
+    passwordInput.value = '';
+    
+    showMessage('Credentials encrypted and saved successfully!', 'success');
     chrome.runtime.sendMessage({ type: 'force-login' });
+//    await chrome.storage.local.set({ username, password });
+//    showMessage('Credentials saved successfully!', 'success');
+    
+//    // Trigger a check if credentials were previously missing
+//    chrome.runtime.sendMessage({ type: 'force-login' });
     
   } catch (error) {
     console.error('Error saving credentials:', error);

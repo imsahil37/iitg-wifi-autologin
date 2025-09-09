@@ -1,3 +1,8 @@
+import { credentialManager } from './utils/crypto-utils.js';
+// crypto--encryption
+//const credManager = new credentialManager();
+//credManager.initialize();
+
 // State management
 let state = {
   status: 'idle', // idle, checking, connected, needs_login, error, network_down
@@ -190,9 +195,9 @@ async function handleNetworkDown() {
 // Perform login with better error handling
 async function performLogin() {
   try {
-    const { username, password } = await chrome.storage.local.get(['username', 'password']);
+    const { encryptedCreds } = await chrome.storage.local.get('encryptedCreds');
     
-    if (!username || !password) {
+    if (!encryptedCreds) {
       updateState({ 
         status: 'error',
         lastError: 'Credentials not configured',
@@ -202,7 +207,33 @@ async function performLogin() {
       return;
     }
     
+    const credentials = await credentialManager.decryptCredentials(encryptedCreds);
+    
+    if (!credentials || !credentials.username || !credentials.password) {
+      updateState({ 
+        status: 'error',
+        lastError: 'Failed to decrypt credentials',
+        isConnected: false
+      });
+      showCredentialsNotification();
+      return;
+    }
+    
+    const { username, password } = credentials;
     updateState({ status: 'checking' });
+    //const { username, password } = await chrome.storage.local.get(['username', 'password']);
+    
+    //if (!username || !password) {
+    //  updateState({ 
+    //    status: 'error',
+    //    lastError: 'Credentials not configured',
+    //    isConnected: false
+    //  });
+    //  showCredentialsNotification();
+    //  return;
+    //}
+    //
+    //updateState({ status: 'checking' });
     
     // Step 1: Get login page to extract magic token
     const loginPageResponse = await fetch(PORTAL_URL, {

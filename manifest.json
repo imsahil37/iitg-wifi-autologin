@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "IITG Wi-Fi Auto Login",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Automatic login for IITG Agnigarh captive portal with Material You UI",
   
   "permissions": [
@@ -17,7 +17,8 @@
   ],
   
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   
   "action": {
