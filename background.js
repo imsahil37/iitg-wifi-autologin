@@ -381,7 +381,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       break;
       
     case 'force-login':
-      if (state.status === 'connected') {
+      if (0) {
         sendResponse({ success: false, message: 'Already connected' });
       } else {
         checkAndLogin(true).then(() => {
