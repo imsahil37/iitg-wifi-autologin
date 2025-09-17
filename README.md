@@ -40,8 +40,8 @@ This project is built with modern, vanilla JavaScript (ES6 Modules) and standard
 
 * `background.js`: The core service worker that handles all logic.
 * `utils/crypto-utils.js`: Manages secure credential encryption and decryption.
-* `popup.html` / `popup.js`: The UI and logic for the toolbar popup.
-* `options.html` / `options.js`: The UI and logic for the settings page.
+* `popup/popup.html` / `popup/popup.js`: The UI and logic for the toolbar popup.
+* `options/options.html` / `options/options.js`: The UI and logic for the settings page.
 * `manifest.json`: The extension's manifest file.
 
 Feel free to fork the repository and contribute!

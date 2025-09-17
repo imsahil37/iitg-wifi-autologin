@@ -1,4 +1,4 @@
-import { credentialManager } from './utils/crypto-utils.js';
+import { credentialManager } from '../utils/crypto-utils.js';
 // crypto--encryption
 //const credManager = new credentialManager();
 //credManager.initialize();
