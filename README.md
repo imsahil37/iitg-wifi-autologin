@@ -44,4 +44,17 @@ This project is built with modern, vanilla JavaScript (ES6 Modules) and standard
 * `options/options.html` / `options/options.js`: The UI and logic for the settings page.
 * `manifest.json`: The extension's manifest file.
 
+---
+
+## 🔒 Privacy
+
+This extension is designed with your privacy in mind. Here's how we handle your data:
+
+* **Local Storage:** Your IITG username and password are encrypted and stored locally on your computer.
+* **No Cloud Sync:** Your credentials are never sent to any external servers.
+* **Strong Encryption:** We use the Web Crypto API for secure credential storage.
+* **Transparency:** For more details, please see our [Privacy Policy](PRIVACY_POLICY.md).
+
+---
+
 Feel free to fork the repository and contribute!
