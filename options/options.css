@@ -215,20 +215,43 @@ input[type="password"]:focus {
 }
 
 .warning-message {
-  background-color: #FFF3CD;
-  border: 1px solid #FFEAA7;
+  background-color: #e8eaed;
+  border: 1px solid #d8dbdf;
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 20px;
-  color: #856404;
+  color: #202124;
   font-size: 14px;
+}
+
+.warning-message strong {
+  color: #b35900;
+  font-weight: 600;
+}
+
+.warning-message a {
+  color: #1a73e8;
+  text-decoration: underline;
+}
+
+.warning-message a:hover {
+  color: #174ea6;
 }
 
 @media (prefers-color-scheme: dark) {
   .warning-message {
-    background-color: #332701;
-    border-color: #664802;
-    color: #D1A827;
+    background-color: #2d333b;
+    border-color: #444c56;
+    color: #cdd9e5;
+  }
+  .warning-message strong {
+    color: #ffc107;
+  }
+  .warning-message a {
+    color: #8ab4f8;
+  }
+  .warning-message a:hover {
+    color: #b8d2fb;
   }
 }
 
