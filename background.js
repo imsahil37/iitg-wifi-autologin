@@ -13,6 +13,9 @@ let state = {
   retryCount: 0
 };
 
+let loadStatePromise = null;
+let isLoadingState = false;
+
 // Constants
 const PORTAL_URL = 'https://agnigarh.iitg.ac.in:1442/login?';
 const PORTAL_BASE = 'https://agnigarh.iitg.ac.in:1442';
@@ -23,19 +26,20 @@ const RETRY_DELAYS = [5, 15, 45]; // Exponential backoff in seconds
 
 // Initialize
 chrome.runtime.onInstalled.addListener(() => {
-  setupAlarms();
-  loadState();
+  initializeBackground();
 });
 
 chrome.runtime.onStartup.addListener(() => {
-  setupAlarms();
-  loadState();
+  initializeBackground();
 });
 
 // Setup periodic checks
 function setupAlarms() {
   chrome.alarms.create('connectivity-check', { periodInMinutes: CHECK_INTERVAL });
-  chrome.alarms.onAlarm.addListener(handleAlarm);
+
+  if (!chrome.alarms.onAlarm.hasListener(handleAlarm)) {
+    chrome.alarms.onAlarm.addListener(handleAlarm);
+  }
 }
 
 async function handleAlarm(alarm) {
@@ -49,15 +53,52 @@ async function handleAlarm(alarm) {
 
 // Load persisted state
 async function loadState() {
-  const data = await chrome.storage.local.get(['lastLoginAt', 'nextRenewAt', 'paused']);
-  if (data.lastLoginAt) state.lastLoginAt = data.lastLoginAt;
-  if (data.nextRenewAt) state.nextRenewAt = data.nextRenewAt;
-  
-  // Initial check
-  if (!data.paused) {
-    await checkAndLogin();
+  isLoadingState = true;
+
+  try {
+    const data = await chrome.storage.local.get([
+      'persistedState',
+      'lastLoginAt',
+      'nextRenewAt',
+      'lastError',
+      'status',
+      'isConnected',
+      'paused'
+    ]);
+
+    const persistedState = data.persistedState || {};
+
+    state = {
+      ...state,
+      ...persistedState,
+      lastLoginAt: persistedState.lastLoginAt ?? data.lastLoginAt ?? state.lastLoginAt,
+      nextRenewAt: persistedState.nextRenewAt ?? data.nextRenewAt ?? state.nextRenewAt,
+      lastError: persistedState.lastError ?? data.lastError ?? state.lastError,
+      status: persistedState.status ?? data.status ?? state.status,
+      isConnected: persistedState.isConnected ?? data.isConnected ?? state.isConnected
+    };
+
+    // Initial check
+    if (!data.paused) {
+      try {
+        await checkAndLogin();
+      } catch (error) {
+        console.error('Initial connectivity check failed:', error);
+      }
+    }
+
+    return state;
+  } finally {
+    isLoadingState = false;
   }
 }
+
+function initializeBackground() {
+  setupAlarms();
+  loadStatePromise = loadState();
+}
+
+initializeBackground();
 
 // Update state and persist
 function updateState(updates) {
@@ -86,12 +127,22 @@ function updateState(updates) {
   chrome.action.setBadgeBackgroundColor({ color: '#666666' });
   
   // Persist important state
-  if (updates.lastLoginAt !== undefined || updates.nextRenewAt !== undefined) {
-    chrome.storage.local.set({
-      lastLoginAt: state.lastLoginAt,
-      nextRenewAt: state.nextRenewAt
-    });
-  }
+  const persistableState = {
+    status: state.status,
+    lastError: state.lastError,
+    lastLoginAt: state.lastLoginAt,
+    nextRenewAt: state.nextRenewAt,
+    isConnected: state.isConnected
+  };
+
+  chrome.storage.local.set({
+    persistedState: persistableState,
+    lastLoginAt: state.lastLoginAt,
+    nextRenewAt: state.nextRenewAt,
+    lastError: state.lastError,
+    status: state.status,
+    isConnected: state.isConnected
+  });
   
   // Broadcast state change
   chrome.runtime.sendMessage({ type: 'state-update', state }).catch(() => {});
@@ -145,6 +196,14 @@ async function checkConnectivity() {
 
 // Main check and login flow
 async function checkAndLogin(forceLogin = false) {
+  if (loadStatePromise && !isLoadingState) {
+    try {
+      await loadStatePromise;
+    } catch (e) {
+      // Ignore load failures and continue with best effort state
+    }
+  }
+
   updateState({ status: 'checking' });
   
   // Check if we need to renew
@@ -377,26 +436,42 @@ chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) =
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.type) {
     case 'get-state':
+      if (loadStatePromise) {
+        loadStatePromise
+          .then(() => sendResponse(state))
+          .catch(() => sendResponse(state));
+        return true;
+      }
+
       sendResponse(state);
       break;
-      
+
     case 'force-login':
       if (0) {
         sendResponse({ success: false, message: 'Already connected' });
       } else {
-        checkAndLogin(true).then(() => {
-          sendResponse({ success: true });
-        });
+        checkAndLogin(true)
+          .then(() => {
+            sendResponse({ success: true });
+          })
+          .catch((error) => {
+            sendResponse({ success: false, message: error.message });
+          });
       }
       return true; // Will respond asynchronously
-      
+
     case 'toggle-pause':
-      chrome.storage.local.set({ paused: request.paused }).then(() => {
-        if (!request.paused) {
-          checkAndLogin();
-        }
-        sendResponse({ success: true });
-      });
+      chrome.storage.local
+        .set({ paused: request.paused })
+        .then(() => {
+          if (!request.paused) {
+            checkAndLogin();
+          }
+          sendResponse({ success: true });
+        })
+        .catch((error) => {
+          sendResponse({ success: false, message: error.message });
+        });
       return true; // Will respond asynchronously
       
     default:
@@ -407,11 +482,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // Listen for storage changes from options page
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === 'local') {
-    if (changes.username || changes.password) {
+    if (changes.username || changes.password || changes.encryptedCreds) {
       // Credentials updated, clear error state if any
-      if (state.lastError === 'Credentials not configured' || 
+      if (state.lastError === 'Credentials not configured' ||
           state.lastError === 'Invalid credentials') {
-        updateState({ lastError: null, status: 'idle' });
+        updateState({ lastError: null, status: 'idle', retryCount: 0 });
         checkAndLogin();
       }
     }
