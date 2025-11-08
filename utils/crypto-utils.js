@@ -3,67 +3,46 @@
 const CRYPTO_CONFIG = {
   name: 'AES-GCM',
   length: 256,
-  ivLength: 12,
-  saltLength: 16,
-  iterations: 100000
+  ivLength: 12
 };
 
 export class CredentialManager {
   constructor() {
     this.initialized = false;
-    this.keyMaterial = null;
+    this.key = null;
   }
 
   async initialize() {
     if (this.initialized) return;
-    
-    const extensionId = chrome.runtime.id;
-    const encoder = new TextEncoder();
-    
-    // Create a unique key for this installation
-    const baseKey = await crypto.subtle.digest(
-      'SHA-256',
-      encoder.encode(extensionId + navigator.userAgent)
-    );
-    
-    this.keyMaterial = await crypto.subtle.importKey(
-      'raw',
-      baseKey,
-      { name: 'PBKDF2' },
-      false,
-      ['deriveKey']
-    );
-    
+
+    const { encryptionKey } = await chrome.storage.local.get('encryptionKey');
+
+    if (encryptionKey && Array.isArray(encryptionKey)) {
+      const keyBytes = new Uint8Array(encryptionKey);
+      this.key = await crypto.subtle.importKey(
+        'raw',
+        keyBytes,
+        { name: CRYPTO_CONFIG.name },
+        false,
+        ['encrypt', 'decrypt']
+      );
+    } else {
+      const generatedKey = await crypto.subtle.generateKey(
+        { name: CRYPTO_CONFIG.name, length: CRYPTO_CONFIG.length },
+        true,
+        ['encrypt', 'decrypt']
+      );
+
+      const exported = new Uint8Array(await crypto.subtle.exportKey('raw', generatedKey));
+      await chrome.storage.local.set({ encryptionKey: Array.from(exported) });
+      this.key = generatedKey;
+    }
+
     this.initialized = true;
   }
 
   async getEncryptionKey() {
-    const salt = await this.getOrCreateSalt();
-    
-    return crypto.subtle.deriveKey(
-      {
-        name: 'PBKDF2',
-        salt: salt,
-        iterations: CRYPTO_CONFIG.iterations,
-        hash: 'SHA-256'
-      },
-      this.keyMaterial,
-      { name: CRYPTO_CONFIG.name, length: CRYPTO_CONFIG.length },
-      false,
-      ['encrypt', 'decrypt']
-    );
-  }
-
-  async getOrCreateSalt() {
-    const { salt } = await chrome.storage.local.get('salt');
-    
-    if (salt) {
-      return new Uint8Array(salt);
-    }
-    
-    const newSalt = crypto.getRandomValues(new Uint8Array(CRYPTO_CONFIG.saltLength));
-    await chrome.storage.local.set({ salt: Array.from(newSalt) });
-    return newSalt;
+    return this.key;
   }
 
   async encryptCredentials(username, password) {
